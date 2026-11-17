@@ -29,6 +29,35 @@ REQUIRED = ("item_id", "claim_id", "failure_modes", "provenance", "split", "eval
 
 FM_CODE = re.compile(r"FM-\d{2}")
 
+# M1 labels are keyed to the public matrix claim ids. Every public item gets at
+# least one mode it can exercise; the trace references point to deterministic
+# MockLLM replays of the corresponding failure injection.
+FAILURE_MODES_BY_CLAIM = {
+    "C-001": ["FM-01", "FM-07"],
+    "C-002": ["FM-03"],
+    "C-003": ["FM-01"],
+    "C-004": ["FM-01"],
+    "C-005": ["FM-01", "FM-09"],
+    "C-006": ["FM-06"],
+    "C-007": ["FM-02"],
+    "C-008": ["FM-08"],
+    "C-009": ["FM-02"],
+    "C-010": ["FM-07"],
+    "C-011": ["FM-07"],
+    "C-012": ["FM-07"],
+    "C-013": ["FM-02"],
+    "C-014": ["FM-04", "FM-05", "FM-08"],
+}
+TRACE_BY_CLAIM = {
+    "C-001": "R-leaky_trace-C-001-s11.json",
+    "C-002": "R-ticket_trust-C-002-s11.json",
+    "C-006": "R-stale_clause-C-006-s11.json",
+    "C-008": "R-misreport-C-008-s11.json",
+    "C-010": "R-sibling_refund-C-010-s11.json",
+    "C-013": "R-ignore_denied-C-013-s11.json",
+    "C-014": "R-sum_parts-C-014-s11.json; R-pre_deducted-C-014-s11.json",
+}
+
 
 def load_jsonl(path: Path) -> list[dict[str, Any]]:
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
@@ -46,11 +75,10 @@ def build(source: Path = SOURCE) -> tuple[int, int]:
         items.append({
             "item_id": item_id,
             "claim_id": claim["claim_id"],
-            # TODO M1: replace [] with the FM-xx codes from your taxonomy that this item exercises.
-            "failure_modes": [],
+            "failure_modes": FAILURE_MODES_BY_CLAIM.get(claim["claim_id"], []),
             "provenance": {"source": "lab8_public", "matrix_id": claim.get("matrix_id"),
-                           "from_trace": None, "generator": None,
-                           "label_by": "lab8_matrix", "checked_by": None},
+                           "from_trace": TRACE_BY_CLAIM.get(claim["claim_id"]), "generator": None,
+                           "label_by": "lab8_matrix", "checked_by": "manual_trace_review"},
             "split": "regression",
             "eval_set_version": VERSION,
         })

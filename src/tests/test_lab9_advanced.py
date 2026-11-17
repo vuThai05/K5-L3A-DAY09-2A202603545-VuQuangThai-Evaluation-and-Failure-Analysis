@@ -63,6 +63,38 @@ def test_integrity_flags_loosened_spec():
     assert gate.integrity_check(base, base, SPEC, SPEC) == []
 
 
+def test_integrity_flags_duplicate_pairs_and_evaluator_failures():
+    from lab9 import gate
+
+    base = _report(copy.deepcopy(ROWS), {"pass_rate": 1.0})
+    duplicate_rows = copy.deepcopy(ROWS)
+    duplicate_rows[-1] = copy.deepcopy(duplicate_rows[0])
+    duplicate = _report(duplicate_rows, {"pass_rate": 1.0})
+    assert gate.integrity_check(duplicate, base, SPEC)
+
+    broken = _report(copy.deepcopy(ROWS), {"pass_rate": 1.0})
+    broken["evaluator_failures"] = ["E-001@1:RuntimeError"]
+    broken["rows"][0]["pass_rate"] = None
+    assert gate.integrity_check(broken, base, SPEC)
+
+
+def test_integrity_flags_slice_relabel_and_slice_ratchet():
+    from lab9 import gate
+
+    base = _report(copy.deepcopy(ROWS), {"pass_rate": 1.0})
+    relabeled_rows = copy.deepcopy(ROWS)
+    relabeled_rows[0]["slices"] = ["adversarial"]
+    relabeled = _report(relabeled_rows, {"pass_rate": 1.0})
+    assert gate.integrity_check(relabeled, base, SPEC)
+
+    strict = copy.deepcopy(SPEC)
+    strict["slices"] = [{"name": "denial", "metric": "pass_rate", "min": 0.9,
+                         "no_significant_drop": True, "blocking": True}]
+    loose = copy.deepcopy(strict)
+    loose["slices"][0].pop("no_significant_drop")
+    assert gate.integrity_check(base, base, loose, strict)
+
+
 def test_slice_check_blocks_a_slice_below_floor():
     from lab9 import gate
 
